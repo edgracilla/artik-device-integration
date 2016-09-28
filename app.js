@@ -37,28 +37,46 @@ platform.on('sync', function (lastSyncDate) {
             });
         },
         (token, done) => {
-            let userDevicesOptions = {
-                url: `https://api.artik.cloud/v1.1/users/${user_id}/devices`,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            };
+            let hasResults = true;
+            let count = 100;
+            let offset = 0;
+            async.whilst(
+                () => {
+                    return hasResults;
+                },
+                (callback) => {
+                    let userDevicesOptions = {
+                        url: `https://api.artik.cloud/v1.1/users/${user_id}/devices?offset=${count * offset}&count=${count}`,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        }
+                    };
 
-            request(userDevicesOptions, (error, response, body) => {
-                if (!error && response.statusCode === 200) {
-                    let data = JSON.parse(body).data;
-                    let devices = [];
+                    request(userDevicesOptions, (error, response, body) => {
+                        if (!error && response.statusCode === 200) {
+                            let result = JSON.parse(body);
+                            offset++;
 
-                    data.devices.forEach((device) => {
-                        platform.syncDevice(device);
+                            result.data.devices.forEach((device) => {
+                                platform.syncDevice(device);
+                            });
+
+                            if (result.count === 0) {
+                                hasResults = false;
+                            }
+
+                            callback(null, hasResults);
+                        } else {
+                            error = error ? error : new Error(body.error);
+                            callback(error);
+                        }
                     });
-                    done(null, token, devices);
-                } else {
-                    error = error ? error : new Error(body.error);
-                    done(error);
+                },
+                (err) => {
+                    done(err);
                 }
-            });
+            );
         }
     ], (error) => {
         platform.handleException(error);
