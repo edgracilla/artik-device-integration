@@ -10,25 +10,6 @@ var get      = require('lodash.get'),
 	isEmpty  = require('lodash.isempty'),
 	config;
 
-let syncDevices = function (devices, callback) {
-	async.waterfall([
-		async.constant(devices),
-		async.asyncify(JSON.parse),
-		(obj, done) => {
-			done(null, get(obj, 'data.devices'));
-		},
-		(devicesArr, done) => {
-			if (isEmpty(devicesArr)) return done(null, 0);
-
-			async.each(devicesArr, (device, cb) => {
-				platform.syncDevice(device, cb);
-			}, (error) => {
-				done(error, devicesArr.length);
-			});
-		}
-	], callback);
-};
-
 /**
  * Emitted when the platform issues a sync request. Means that the device integration should fetch updates from the
  * 3rd party service.
@@ -79,9 +60,9 @@ platform.on('sync', function () {
 			}, (cb) => {
 				request.get({
 					url: `${ARTIK_CLOUD_ENDPOINT}/users/${config.user_id}/devices?offset=${100 * offset}&count=100`,
-					headers: {
-						'Content-Type': 'application/json',
-						'Authorization': `Bearer ${token}`
+					json: true,
+					auth: {
+						bearer: token
 					}
 				}, (error, response, body) => {
 					if (error)
@@ -89,14 +70,15 @@ platform.on('sync', function () {
 					else if (body.error || response.statusCode !== 200)
 						cb(new Error(body.error));
 					else {
+						let devices = get(body, 'data.devices');
+
+						if (isEmpty(devices) <= 0) hasMoreResults = false;
+
 						offset++;
 
-						syncDevices(body, (syncError, count) => {
-							if (error) return cb(error);
-							if (count <= 0) hasMoreResults = false;
-
-							cb();
-						});
+						async.each(devices, (device, next) => {
+							platform.syncDevice(device, next);
+						}, cb);
 					}
 				});
 			}, done);
