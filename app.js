@@ -15,7 +15,7 @@ let syncDevices = function (devices, callback) {
 		async.constant(devices),
 		async.asyncify(JSON.parse),
 		(obj, done) => {
-			done(null, get(obj, 'data.devices'))
+			done(null, get(obj, 'data.devices'));
 		},
 		(devicesArr, done) => {
 			if (isEmpty(devicesArr)) return done(null, 0);
@@ -67,7 +67,7 @@ platform.on('sync', function () {
 				else if (isEmpty(obj.access_token))
 					done(new Error('Invalid Credentials. No access token was received.'));
 				else
-					done(null, obj.access_token)
+					done(null, obj.access_token);
 			});
 		},
 		(token, done) => {
