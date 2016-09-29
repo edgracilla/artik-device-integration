@@ -17,10 +17,14 @@ let syncDevices = function (devices, callback) {
 		(obj, done) => {
 			done(null, get(obj, 'data.devices'))
 		},
-		(deviceArr, done) => {
+		(devicesArr, done) => {
+			if (isEmpty(devicesArr)) return done(null, 0);
+
 			async.each(devicesArr, (device, cb) => {
 				platform.syncDevice(device, cb);
-			}, done);
+			}, (error) => {
+				done(error, devicesArr.length);
+			});
 		}
 	], callback);
 };
@@ -87,12 +91,12 @@ platform.on('sync', function () {
 					else {
 						offset++;
 
-						if (result.count <= 0) {
-							hasMoreResults = false;
+						syncDevices(body, (syncError, count) => {
+							if (error) return cb(error);
+							if (count <= 0) hasMoreResults = false;
+
 							cb();
-						}
-						else
-							syncDevices(body, cb);
+						});
 					}
 				});
 			}, done);
