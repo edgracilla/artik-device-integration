@@ -1,106 +1,112 @@
 'use strict';
 
-var platform = require('./platform'),
-    request = require('request'),
-    async = require('async'),
-    client_id,
-    client_secret,
-    user_id;
+const TOKEN_ENDPOINT       = 'https://accounts.artik.cloud/token',
+	  ARTIK_CLOUD_ENDPOINT = 'https://api.artik.cloud/v1.1';
+
+var get      = require('lodash.get'),
+	async    = require('async'),
+	request  = require('request'),
+	platform = require('./platform'),
+	isEmpty  = require('lodash.isempty'),
+	config;
+
+let syncDevices = function (devices, callback) {
+	async.waterfall([
+		async.constant(devices),
+		async.asyncify(JSON.parse),
+		(obj, done) => {
+			done(null, get(obj, 'data.devices'))
+		},
+		(deviceArr, done) => {
+			async.each(devicesArr, (device, cb) => {
+				platform.syncDevice(device, cb);
+			}, done);
+		}
+	], callback);
+};
 
 /**
  * Emitted when the platform issues a sync request. Means that the device integration should fetch updates from the
  * 3rd party service.
  */
-platform.on('sync', function (lastSyncDate) {
-    async.waterfall([
-        (done) => {
-            let clientCredentialsOptions = {
-                method: 'POST',
-                url: 'https://accounts.artik.cloud/token',
-                headers: {
-                    'content-type': 'application/x-www-form-urlencoded'
-                },
-                form: {grant_type: 'client_credentials'},
-                auth: {
-                    user: client_id,
-                    pass: client_secret
-                }
-            };
-            request(clientCredentialsOptions, (error, response, body) => {
-                if (!error && response.statusCode === 200) {
-                    let token = JSON.parse(body).access_token;
-                    done(null, token);
-                } else {
-                    error = error ? error : new Error(body.error);
-                    done(error);
-                }
-            });
-        },
-        (token, done) => {
-            let hasResults = true;
-            let count = 100;
-            let offset = 0;
-            async.whilst(
-                () => {
-                    return hasResults;
-                },
-                (callback) => {
-                    let userDevicesOptions = {
-                        url: `https://api.artik.cloud/v1.1/users/${user_id}/devices?offset=${count * offset}&count=${count}`,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        }
-                    };
+platform.on('sync', function () {
+	async.waterfall([
+		(done) => {
+			request.post({
+				url: TOKEN_ENDPOINT,
+				headers: {
+					'content-type': 'application/x-www-form-urlencoded'
+				},
+				form: {
+					grant_type: 'client_credentials'
+				},
+				auth: {
+					user: config.client_id,
+					pass: config.client_secret
+				}
+			}, (error, response, body) => {
+				if (error)
+					done(error);
+				else if (body.error || response.statusCode !== 200)
+					done(new Error(body.error));
+				else
+					done(null, body);
+			});
+		},
+		(tokenResponse, done) => {
+			async.waterfall([
+				async.constant(tokenResponse),
+				async.asyncify(JSON.parse)
+			], (parseError, obj) => {
+				if (parseError)
+					done(parseError);
+				else if (isEmpty(obj.access_token))
+					done(new Error('Invalid Credentials. No access token was received.'));
+				else
+					done(null, obj.access_token)
+			});
+		},
+		(token, done) => {
+			let hasMoreResults = true;
+			let offset = 0;
 
-                    request(userDevicesOptions, (error, response, body) => {
-                        if (!error && response.statusCode === 200) {
-                            let result = JSON.parse(body);
-                            offset++;
+			async.whilst(() => {
+				return hasMoreResults;
+			}, (cb) => {
+				request.get({
+					url: `${ARTIK_CLOUD_ENDPOINT}/users/${config.user_id}/devices?offset=${100 * offset}&count=100`,
+					headers: {
+						'Content-Type': 'application/json',
+						'Authorization': `Bearer ${token}`
+					}
+				}, (error, response, body) => {
+					if (error)
+						cb(error);
+					else if (body.error || response.statusCode !== 200)
+						cb(new Error(body.error));
+					else {
+						offset++;
 
-                            result.data.devices.forEach((device) => {
-                                platform.syncDevice(device);
-                            });
-
-                            if (result.count === 0) {
-                                hasResults = false;
-                            }
-
-                            callback(null, hasResults);
-                        } else {
-                            error = error ? error : new Error(body.error);
-                            callback(error);
-                        }
-                    });
-                },
-                (err) => {
-                    done(err);
-                }
-            );
-        }
-    ], (error) => {
-        platform.handleException(error);
-    });
+						if (result.count <= 0) {
+							hasMoreResults = false;
+							cb();
+						}
+						else
+							syncDevices(body, cb);
+					}
+				});
+			}, done);
+		}
+	], (error) => {
+		if (error) platform.handleException(error);
+	});
 });
 
 /**
  * Emitted when the platform shuts down the plugin. The Device Integration should perform cleanup of the resources on this event.
  */
 platform.once('close', function () {
-    let d = require('domain').create();
-
-    d.once('error', function (error) {
-        console.error(error);
-        platform.handleException(error);
-        platform.notifyClose();
-        d.exit();
-    });
-
-    d.run(function () {
-        // TODO: Release all resources and close connections etc.
-        platform.notifyClose(); // Notify the platform that resources have been released.
-        d.exit();
-    });
+	platform.notifyClose();
 });
 
 /**
@@ -109,11 +115,7 @@ platform.once('close', function () {
  * @param {object} options The parameters or options. Specified through config.json.
  */
 platform.once('ready', function (options) {
-    client_id = options.client_id;
-    client_secret = options.client_secret;
-    user_id = options.user_id;
-
-    console.log(options);
-    platform.notifyReady();
-    platform.log('Artik device integration has been initialized.');
+	config = options;
+	platform.notifyReady();
+	platform.log('Artik Device Integration has been initialized.');
 });
