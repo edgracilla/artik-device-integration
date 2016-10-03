@@ -30,12 +30,7 @@ platform.on('sync', function () {
 					pass: config.client_secret
 				}
 			}, (error, response, body) => {
-				if (error)
-					done(error);
-				else if (body.error || response.statusCode !== 200)
-					done(new Error(body.error));
-				else
-					done(null, body);
+				done(error, body);
 			});
 		},
 		(tokenResponse, done) => {
@@ -45,6 +40,8 @@ platform.on('sync', function () {
 			], (parseError, obj) => {
 				if (parseError)
 					done(parseError);
+				else if (obj.error)
+					done(new Error(obj.error));
 				else if (isEmpty(obj.access_token))
 					done(new Error('Invalid Credentials. No access token was received.'));
 				else
@@ -68,7 +65,7 @@ platform.on('sync', function () {
 					if (error)
 						cb(error);
 					else if (body.error || response.statusCode !== 200)
-						cb(new Error(body.error));
+						cb(new Error(body.error || response.statusMessage));
 					else {
 						let devices = get(body, 'data.devices');
 
