@@ -11,8 +11,13 @@ var cp     = require('child_process'),
 describe('Device-integration', function () {
     this.slow(5000);
 
-    after('terminate child process', function () {
-        artikDeviceIntegration.kill('SIGKILL');
+    after('terminate child process', function (done) {
+        this.timeout(20000);
+
+        setTimeout(() => {
+            artikDeviceIntegration.kill('SIGKILL');
+            done();
+        }, 19000);
     });
 
     describe('#spawn', function () {
@@ -28,15 +33,19 @@ describe('Device-integration', function () {
             artikDeviceIntegration.on('message', function (message) {
                 if (message.type === 'ready')
                     done();
+                else if (message.type === 'upsertdevice')
+                    console.log(message.data);
+                else if (message.type === 'error')
+                    console.error(message.data);
             });
 
             artikDeviceIntegration.send({
                 type: 'ready',
                 data: {
                     options: {
-                        client_id: 'b13c60dd1f264224a34d1e9c3d44ec27',
-                        client_secret: '7c08cea3447442acb7bef36dcdb99fb6',
-                        user_id: 'a103bd5381bc4d18b8dee8a728a5e0a2'
+                        client_id: 'a5047035ee004c69bf3ff607aa357a19',
+                        client_secret: '81582b3d43ec4a9f9115152618ed9a8c',
+                        user_id: '8f2bec16d5c146b78c7b9accd926b380'
                     }
                 }
             }, function (error) {
@@ -46,25 +55,13 @@ describe('Device-integration', function () {
     });
 
     describe('#sync', function () {
-        this.timeout(10000);
         it('should sync latest data of every device', function(done) {
-            let isCalled = false;
             artikDeviceIntegration.send({
                 type: 'sync',
                 data: {
                     last_sync_dt: new Date('12-12-1970')
                 }
-            });
-
-            artikDeviceIntegration.on('message', function (message) {
-                if (message.type === 'upsertdevice') {
-                    console.log(message.data);
-                    if (!isCalled) {
-                        done();
-                        isCalled = true;
-                    }
-                }
-            });
+            }, done);
         });
     });
 });
