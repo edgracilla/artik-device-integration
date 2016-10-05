@@ -1,7 +1,7 @@
 {
   "name": "artik-device-integration",
   "description": "Samsung Artik Device Integration Plugin for the Reekoh IoT Platform. Syncs devices from Samsung Artik and registers them in Reekoh.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "Reekoh, Inc.",
   "main": "app.js",
   "scripts": {
