@@ -67,7 +67,7 @@ platform.on('sync', function () {
 						offset++;
 
 						async.each(devices, (device, next) => {
-							platform.syncDevice(device, next);
+							platform.syncDevice(JSON.stringify(device), next);
 						}, cb);
 					}
 				});
