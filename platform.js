@@ -38,7 +38,7 @@ require('util').inherits(Platform, require('events').EventEmitter);
 Platform.init = function () {
     ['SIGHUP', 'SIGINT', 'SIGTERM'].forEach((signal) => {
         process.on(signal, () => {
-        console.log(`Executing ${signal} listener...`);
+            console.log(`Executing ${signal} listener...`);
             this.emit('close');
 
             setTimeout(() => {
@@ -49,7 +49,7 @@ Platform.init = function () {
     });
 
     ['unhandledRejection', 'uncaughtException'].forEach((exceptionEvent) => {
-            process.on(exceptionEvent, (error) => {
+        process.on(exceptionEvent, (error) => {
             console.error(exceptionEvent, error);
             this.handleException(error);
             this.emit('close');
@@ -62,8 +62,8 @@ Platform.init = function () {
     });
 
     /**
-    *   Available events triggered by the main instance ['ready', 'close', 'adddevice', 'updatedevice', 'removedevice']
-    */
+     *   Available events triggered by the main instance ['ready', 'close', 'adddevice', 'updatedevice', 'removedevice']
+     */
     process.on('message', (m) => {
         let type = m.type;
 
@@ -85,13 +85,16 @@ Platform.init = function () {
 
 /**
  * Add or update 3rd party service devices to Reekoh devices.
- * @param {object} [device] Device metadata.
+ * @param {string} device Device information.
  * @param {function} [callback] Optional callback to be called once the signal has been sent.
  */
-Platform.prototype.syncDevice = function(device, callback) {
-    callback = callback || function () {};
+Platform.prototype.syncDevice = function (device, callback) {
+    callback = callback || function () {
+        };
 
     setImmediate(() => {
+        if (!device || !isString(device)) return callback(new Error('Device data must be represented as a serialized JSON String.'));
+
         process.send({
             type: 'upsertdevice',
             data: device
@@ -104,8 +107,9 @@ Platform.prototype.syncDevice = function(device, callback) {
  * @param {string} deviceId Device indentifier.
  * @param {function} [callback] Optional callback to be called once the signal has been sent.
  */
-Platform.prototype.removeDevice = function(deviceId, callback) {
-    callback = callback || function () {};
+Platform.prototype.removeDevice = function (deviceId, callback) {
+    callback = callback || function () {
+        };
 
     setImmediate(() => {
         if (!deviceId || !isString(deviceId)) return callback(new Error('A valid client/device identifier is required.'));
