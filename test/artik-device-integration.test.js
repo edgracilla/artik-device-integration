@@ -1,67 +1,75 @@
-/*
- * Just a sample code to test the device integration plugin.
- * Kindly write your own unit tests for your own plugin.
- */
-'use strict';
+/* global describe, it, after, before */
+'use strict'
 
-var cp     = require('child_process'),
-    assert = require('assert'),
-    artikDeviceIntegration;
+const cp = require('child_process')
+const should = require('should')
+const amqp = require('amqplib')
+
+let deviceSync = null
+let _channel = {}
+let _conn = null
 
 describe('Device-integration', function () {
-    this.slow(5000);
+  this.slow(5000)
 
-    after('terminate child process', function (done) {
-        this.timeout(20000);
+  before('init', () => {
+    process.env.PLUGIN_ID = 'demo.dev-sync'
+    process.env.BROKER = 'amqp://guest:guest@127.0.0.1/'
 
-        setTimeout(() => {
-            artikDeviceIntegration.kill('SIGKILL');
-            done();
-        }, 19000);
-    });
+    process.env.ARTIK_CLIENT_ID = 'a5047035ee004c69bf3ff607aa357a19'
+    process.env.ARTIK_CLIENT_SECRET = '81582b3d43ec4a9f9115152618ed9a8c'
+    process.env.ARTIK_USER_ID = '8f2bec16d5c146b78c7b9accd926b380'
 
-    describe('#spawn', function () {
-        it('should spawn a child process', function () {
-            assert.ok(artikDeviceIntegration = cp.fork(process.cwd()), 'Child process not spawned.');
-        });
-    });
+    amqp.connect(process.env.BROKER)
+      .then((conn) => {
+        _conn = conn
+        return conn.createChannel()
+      }).then((channel) => {
+        _channel = channel
+      }).catch((err) => {
+        console.log(err)
+      })
+  })
 
-    describe('#handShake', function () {
-        it('should notify the parent process when ready within 5 seconds', function (done) {
-            this.timeout(5000);
+  after('terminate child process', function (done) {
+    this.timeout(20000)
 
-            artikDeviceIntegration.on('message', function (message) {
-                if (message.type === 'ready')
-                    done();
-                else if (message.type === 'upsertdevice')
-                    console.log(message.data);
-                else if (message.type === 'error')
-                    console.error(message.data);
-            });
+    setTimeout(() => {
+      _conn.close()
+      deviceSync.kill('SIGKILL')
+      done()
+    }, 19000)
+  })
 
-            artikDeviceIntegration.send({
-                type: 'ready',
-                data: {
-                    options: {
-                        client_id: 'a5047035ee004c69bf3ff607aa357a19',
-                        client_secret: '81582b3d43ec4a9f9115152618ed9a8c',
-                        user_id: '8f2bec16d5c146b78c7b9accd926b380'
-                    }
-                }
-            }, function (error) {
-                assert.ifError(error);
-            });
-        });
-    });
+  describe('#spawn', function () {
+    it('should spawn a child process', function () {
+      should.ok(deviceSync = cp.fork(process.cwd()), 'Child process not spawned.')
+    })
+  })
 
-    describe('#sync', function () {
-        it('should sync latest data of every device', function(done) {
-            artikDeviceIntegration.send({
-                type: 'sync',
-                data: {
-                    last_sync_dt: new Date('12-12-1970')
-                }
-            }, done);
-        });
-    });
-});
+  describe('#handShake', function () {
+    it('should notify the parent process when ready within 5 seconds', function (done) {
+      this.timeout(5000)
+
+      deviceSync.on('message', function (message) {
+        if (message.type === 'ready') {
+          done()
+        }
+      })
+    })
+  })
+
+  describe('#sync', function () {
+    it('should sync latest data of every device', function (done) {
+      this.timeout(8000)
+
+      _channel.sendToQueue(process.env.PLUGIN_ID, new Buffer(JSON.stringify({ operation: 'sync' })))
+
+      deviceSync.on('message', function (message) {
+        if (message.type === 'syncDone') {
+          done()
+        }
+      })
+    })
+  })
+})

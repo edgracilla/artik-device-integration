@@ -1,32 +1,34 @@
 {
-  "name": "artik-device-integration",
-  "description": "Samsung Artik Device Integration Plugin for the Reekoh IoT Platform. Syncs devices from Samsung Artik and registers them in Reekoh.",
-  "version": "1.0.4",
+  "name": "device-sync",
+  "version": "1.0.0",
+  "description": "DeviceSync plugin seed",
   "author": "Reekoh, Inc.",
+  "license": "LGPL-3.0",
   "main": "app.js",
   "scripts": {
     "test": "gulp test"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Reekoh/artik-device-integration"
+    "url": "https://github.com/"
   },
   "dependencies": {
-    "async": "^2.0.1",
+    "async": "^2.1.4",
+    "demo-reekoh-node": "^1.0.0",
     "lodash.get": "^4.4.2",
     "lodash.isempty": "^4.4.0",
-    "request": "^2.75.0"
+    "request": "^2.79.0"
   },
   "devDependencies": {
+    "amqplib": "^0.5.1",
     "gulp": "^3.9.1",
     "gulp-cli": "^1.2.1",
     "gulp-jshint": "^2.0.1",
     "gulp-json-lint": "^0.1.0",
-    "gulp-mocha": "^3.0.1",
+    "gulp-mocha": "^2.2.0",
     "gulp-plumber": "^1.1.0",
-    "jshint": "^2.9.2",
-    "mocha": "^3.1.0",
-    "should": "^11.1.0"
-  },
-  "license": "LGPL-3.0"
+    "jshint": "^2.9.4",
+    "mocha": "^2.5.3",
+    "should": "^9.0.2"
+  }
 }
