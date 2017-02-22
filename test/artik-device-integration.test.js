@@ -9,7 +9,7 @@ const PLUGIN_ID = 'demo.dev-sync'
 const BROKER = 'amqp://guest:guest@127.0.0.1/'
 
 let _conn = null
-let _plugin = null
+let _app = null
 let _channel = null
 
 describe('Artik Inventory Sync', function () {
@@ -44,14 +44,14 @@ describe('Artik Inventory Sync', function () {
 
     setTimeout(() => {
       _conn.close()
-      _plugin.kill('SIGKILL')
+      _app.kill('SIGKILL')
       done()
     }, 19000)
   })
 
   describe('#spawn', function () {
     it('should spawn a child process', function () {
-      should.ok(_plugin = cp.fork(process.cwd()), 'Child process not spawned.')
+      should.ok(_app = cp.fork(process.cwd()), 'Child process not spawned.')
     })
   })
 
@@ -59,7 +59,7 @@ describe('Artik Inventory Sync', function () {
     it('should notify the parent process when ready within 5 seconds', function (done) {
       this.timeout(8000)
 
-      _plugin.on('message', function (message) {
+      _app.on('message', function (message) {
         if (message.type === 'ready') {
           done()
         }
@@ -73,7 +73,7 @@ describe('Artik Inventory Sync', function () {
 
       _channel.sendToQueue(PLUGIN_ID, new Buffer(JSON.stringify({ operation: 'sync' })))
 
-      _plugin.on('message', function (message) {
+      _app.on('message', function (message) {
         if (message.type === 'syncDone') {
           done()
         }
