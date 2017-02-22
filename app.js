@@ -1,25 +1,19 @@
 'use strict'
 
-const reekoh = require('demo-reekoh-node')
-const _plugin = new reekoh.plugins.DeviceSync()
+const reekoh = require('reekoh')
+const _plugin = new reekoh.plugins.InventorySync()
 
 const async = require('async')
 const get = require('lodash.get')
 const request = require('request')
 const isEmpty = require('lodash.isempty')
 
-const TOKEN_ENDPOINT = 'https://accounts.artik.cloud/token'
-const ARTIK_CLOUD_ENDPOINT = 'https://api.artik.cloud/v1.1'
-
-let _options = {
-  user_id: process.env.ARTIK_USER_ID,
-  client_id: process.env.ARTIK_CLIENT_ID,
-  client_secret: process.env.ARTIK_CLIENT_SECRET
-}
+let _options = {}
 
 _plugin.once('ready', () => {
+  _options = _plugin.config
   _plugin.log('Device sync has been initialized.')
-  setImmediate(() => { process.send({ type: 'ready' }) }) // for mocha
+  process.send({ type: 'ready' })
 })
 
 _plugin.on('sync', () => {
@@ -27,7 +21,7 @@ _plugin.on('sync', () => {
     (done) => {
 
       let postInfo = {
-        url: TOKEN_ENDPOINT,
+        url: _options.token_endpoint,
         form: { grant_type: 'client_credentials' },
         headers: { 'content-type': 'application/x-www-form-urlencoded' },
         auth: { user: _options.client_id, pass: _options.client_secret },
@@ -56,7 +50,7 @@ _plugin.on('sync', () => {
       }, (cb) => {
 
         let getInfo = {
-          url: `${ARTIK_CLOUD_ENDPOINT}/users/${_options.user_id}/devices?offset=${100 * offset}&count=100`,
+          url: `${_options.cloud_endpoint}/users/${_options.user_id}/devices?offset=${100 * offset}&count=100`,
           json: true,
           auth: { bearer: token }
         }
