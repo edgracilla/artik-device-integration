@@ -1,7 +1,7 @@
 'use strict'
 
 const reekoh = require('reekoh')
-const _plugin = new reekoh.plugins.InventorySync()
+const plugin = new reekoh.plugins.InventorySync()
 
 const async = require('async')
 const get = require('lodash.get')
@@ -10,13 +10,13 @@ const isEmpty = require('lodash.isempty')
 
 let _options = {}
 
-_plugin.once('ready', () => {
-  _options = _plugin.config
-  _plugin.log('Device sync has been initialized.')
-  process.send({ type: 'ready' })
+plugin.once('ready', () => {
+  _options = plugin.config
+  plugin.log('Device sync has been initialized.')
+  plugin.emit('init')
 })
 
-_plugin.on('sync', () => {
+plugin.on('sync', () => {
   async.waterfall([
     (done) => {
 
@@ -67,7 +67,7 @@ _plugin.on('sync', () => {
             offset++
 
             async.each(devices, (device, next) => {
-              _plugin.syncDevice(device)
+              plugin.syncDevice(device)
                 .then(next)
                 .catch(next)
             }, cb)
@@ -76,19 +76,9 @@ _plugin.on('sync', () => {
       }, done)
     }
   ], (error) => {
-    if (error) return _plugin.logException(error)
-    process.send({ type: 'syncDone' })
+    if (error) return plugin.logException(error)
+    plugin.emit('syncDone')
   })
 })
 
-_plugin.on('adddevice', (device) => {
-
-})
-
-_plugin.on('updatedevice', (device) => {
-
-})
-
-_plugin.on('removedevice', (device) => {
-
-})
+module.exports = plugin

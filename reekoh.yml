@@ -1,0 +1,39 @@
+apiVersion: 1.0.0
+kind: Plugin
+metadata:
+  name: Artik Inventory Sync
+  description: Samsung Artik Device Integration Plugin for the Reekoh IoT Platform. Syncs devices from Samsung Artik and registers them in Reekoh
+  documentation: README.md
+  icon: asset/icon/reekoh200x200.png
+  signupLink: https://myservice.com/signup # ??
+  type: InventorySync
+  price: 0
+  tags:
+    - inventory-sync
+    - artik
+  config:
+    clientId:
+      label: Client ID
+      type: String
+      maxLength: 1000
+      required: true
+      help: "Kindly specify the Client ID of your Artik Application."
+    clientSecret:
+      label: Client Secret
+      type: Password
+      maxLength: 1000
+      required: true
+      help: "Kindly specify the Client Secret of your Artik Application."
+    userId:
+      label: User ID
+      type: String
+      maxLength: 1000
+      required: true
+      help: "Kindly specify your Samsung Account/User ID."
+
+  consumerType: pull
+
+  release:
+    version: 1.0.0
+    notes: path/to/RELEASENOTESv1.0.0.md # ??
+    image: path/to/docker/image # ??
